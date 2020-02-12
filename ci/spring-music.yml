@@ -1,0 +1,51 @@
+resources:
+- name: music-repo
+  type: git
+  source:
+    uri: https://github.com/VarunRaisinghani/hello-spring-cloud.git
+    branch: master
+- name: cf
+  type: cf
+  source:
+    api: https://donotuseapi.run.pivotal.io
+    username: vraisinghani@pivotal.io
+    password: Jun2@191
+    organization: cloudnative-varun
+    space: development
+    skip_cert_check: true
+jobs:
+  - name: maven-package
+    plan:
+    - get: music-repo
+      trigger: true
+    - task: maven-package
+      privileged: true
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source: {repository: maven}
+        inputs:
+          - name: music-repo
+        outputs:
+          - name: some-files
+        run:
+          path: mvn
+          args: ["-f", "music-repo/pom.xml", "-DskipTests=true", "package"]
+
+    - task: consume-the-file
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source: { repository: busybox }
+        inputs:
+          - name: some-files
+        run:
+          path: ls
+          args:
+            - ./some-files/
+    - put: cf
+      params:
+        manifest: music-repo/manifest.yml
+        path: some-files/target/hello-spring-cloud-0.0.1.BUILD-SNAPSHOT.jar
