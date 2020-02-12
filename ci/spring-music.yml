@@ -28,24 +28,19 @@ jobs:
         inputs:
           - name: music-repo
         outputs:
-          - name: some-files
+          - name: build
+        # caches:
+        #   - path: repo/m2
         run:
-          path: mvn
-          args: ["-f", "music-repo/pom.xml", "-DskipTests=true", "package"]
-
-    - task: consume-the-file
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source: { repository: busybox }
-        inputs:
-          - name: some-files
-        run:
-          path: ls
+          path: bash
           args:
-            - ./some-files/
+          - -c
+          - |
+            set -e
+            cd music-repo
+            mvn package -DskipTests=true
+            mv target/hello-spring-cloud-0.0.1.BUILD-SNAPSHOT.jar ../build
     - put: cf
       params:
         manifest: music-repo/manifest.yml
-        path: some-files/target/hello-spring-cloud-0.0.1.BUILD-SNAPSHOT.jar
+        path: build/hello-spring-cloud-0.0.1.BUILD-SNAPSHOT.jar
